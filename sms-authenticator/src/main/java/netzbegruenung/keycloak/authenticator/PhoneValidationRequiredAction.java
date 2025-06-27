@@ -23,24 +23,22 @@
 package netzbegruenung.keycloak.authenticator;
 
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
-import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
+import netzbegruenung.keycloak.authenticator.helpers.SmsHelper;
 
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
-import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.theme.Theme;
 
-import java.util.Locale;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+
+import java.util.Optional;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);
@@ -53,43 +51,33 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
 		context.getUser().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
-		try {
-			UserModel user = context.getUser();
-			RealmModel realm = context.getRealm();
-
-			AuthenticationSessionModel authSession = context.getAuthenticationSession();
-			// TODO: get the alias from somewhere else or move config into realm or application scope
-			AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
-
-			String mobileNumber = authSession.getAuthNote("mobile_number");
-			logger.infof("Validating phone number: %s of user: %s", mobileNumber, user.getUsername());
-
-			int length = Integer.parseInt(config.getConfig().get("length"));
-			int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-			String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-			authSession.setAuthNote("code", code);
-			authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
-
-			Theme theme = context.getSession().theme().getTheme(Theme.Type.LOGIN);
-			Locale locale = context.getSession().getContext().resolveLocale(user);
-			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
-
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
-
-			Response challenge = context.form()
-				.setAttribute("realm", realm)
-				.createForm("login-sms.ftl");
-			context.challenge(challenge);
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-			context.failure();
-		}
+		SmsHelper.requiredActionChallenge(context, logger);
 	}
 
 	@Override
 	public void processAction(RequiredActionContext context) {
+		MultivaluedMap<String, String> form = context.getHttpRequest().getDecodedFormParameters();
+
+		// Check if user clicked the resend code link. If so, generate & send again (Stay in the same step
+		if ("resend".equals(form.getFirst("resend"))) {
+			logger.info("Resend form value received.");
+			AuthenticationSessionModel authSession = context.getAuthenticationSession();
+			long now = System.currentTimeMillis();
+			long lastSentTime = Optional.ofNullable(authSession.getAuthNote("lastCodeSent"))
+										.map(Long::parseLong).orElse(0L);
+
+			if (now - lastSentTime < Constants.SMS_COOLDOWN_MS) {
+				// Too soon – redisplay the same page with an error message
+				context.challenge(context.form()
+								.setError("error_sms_cooldown")
+								.createForm(Constants.TPL_CODE));
+				return;          // Stay in the same auth step
+			}
+
+			SmsHelper.requiredActionChallenge(context, logger);   // cool-down passed → send fresh code
+			return;
+		}
+		
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -141,7 +129,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			.form()
 			.setAttribute("realm", context.getRealm())
 			.setError("smsAuthCodeInvalid")
-			.createForm("login-sms.ftl");
+			.createForm(Constants.TPL_CODE);
 		context.challenge(challenge);
 	}
 

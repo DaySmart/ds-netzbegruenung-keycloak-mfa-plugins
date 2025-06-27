@@ -1,8 +1,8 @@
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayInfo=true; section>
-	<#if section = "header">
+	<#if section == "header">
 		${msg("smsPhoneNumberTitle",realm.displayName)}
-	<#elseif section = "form">
+	<#elseif section == "form">
 		<form onsubmit="phonenumber.disabled = true; return true;" id="kc-sms-code-login-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
 			<div class="${properties.kcFormGroupClass!}">
 				<div class="${properties.kcLabelWrapperClass!}">
@@ -24,7 +24,7 @@
 				</div>
 			</div>
 		</form>
-	<#elseif section = "info" >
+	<#elseif section == "info" >
 		${msg("smsPhoneNumberInstructions")}
 	</#if>
 </@layout.registrationLayout>

@@ -21,7 +21,7 @@
 
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
 					<input name="login" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
-					<button class="${properties.kcButtonClass!} ${properties.kcButtonLinkClass!} d-block mx-auto" type="submit" name="resend" value="resend" style="width: calc(100% - 200px); margin: 20px 100px;">
+					<button name="resend" id="resend" class="${properties.kcButtonClass!} ${properties.kcButtonLinkClass!} d-block mx-auto" type="submit" value="resend">
 						${msg("smsAuthResend")}
 					</button>
 				</div>

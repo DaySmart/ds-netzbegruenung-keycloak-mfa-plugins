@@ -22,9 +22,9 @@
 
 package netzbegruenung.keycloak.authenticator;
 
-import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialData;
-import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
-import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
+import netzbegruenung.keycloak.authenticator.adapters.AuthenticationFlowContextAdapter;
+import netzbegruenung.keycloak.authenticator.helpers.SmsHelper;
+import netzbegruenung.keycloak.authenticator.interfaces.UnifiedContext;
 
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialValidator;
@@ -33,72 +33,34 @@ import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.common.util.SecretGenerator;
-import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
-import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.theme.Theme;
-import org.keycloak.util.JsonSerialization;
 
 import jakarta.ws.rs.core.Response;
-import java.util.Locale;
-import java.util.Optional;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
 	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
-	private static final String TPL_CODE = "login-sms.ftl";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
-		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
-		KeycloakSession session = context.getSession();
-		UserModel user = context.getUser();
-		RealmModel realm = context.getRealm();
-
-		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
-		String mobileNumber;
-		try {
-			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
-		} catch (IOException e1) {
-			logger.warn(e1.getMessage(), e1);
-			return;
-		}
-
-		int length = Integer.parseInt(config.getConfig().get("length"));
-		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		authSession.setAuthNote("code", code);
-		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
-
-		try {
-			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
-			Locale locale = session.getContext().resolveLocale(user);
-			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
-
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
-
-			context.challenge(context.form().setAttribute("realm", realm).createForm(TPL_CODE));
-		} catch (Exception e) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
-					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
-		}
+		SmsHelper.authenticate(context, logger);
 	}
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
+		UnifiedContext unifiedContext = new AuthenticationFlowContextAdapter(context);
+
+		if (SmsHelper.handleResendIfRequested(unifiedContext, logger)) {
+			return; // Exit early - resend was handled
+		}
+		
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -127,7 +89,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			if (execution.isRequired()) {
 				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
 					context.form().setAttribute("realm", context.getRealm())
-						.setError("smsAuthCodeInvalid").createForm(TPL_CODE));
+						.setError("smsAuthCodeInvalid").createForm(Constants.SMS_LOGIN_TEMPLATE));
 			} else if (execution.isConditional() || execution.isAlternative()) {
 				context.attempted();
 			}

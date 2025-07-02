@@ -1,8 +1,8 @@
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayInfo=true; section>
-	<#if section = "header">
+	<#if section == "header">
 		${msg("smsAuthTitle",realm.displayName)}
-	<#elseif section = "form">
+	<#elseif section == "form">
 		<form onsubmit="login.disabled = true; return true;" id="kc-sms-code-login-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
 			<div class="${properties.kcFormGroupClass!}">
 				<div class="${properties.kcLabelWrapperClass!}">
@@ -21,10 +21,13 @@
 
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
 					<input name="login" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
+					<button name="resend" id="resend" class="${properties.kcButtonClass!} ${properties.kcButtonLinkClass!} d-block mx-auto" type="submit" value="resend">
+						${msg("smsAuthResend")}
+					</button>
 				</div>
 			</div>
 		</form>
-	<#elseif section = "info" >
+	<#elseif section == "info" >
 		${msg("smsAuthInstruction")}
 	</#if>
 </@layout.registrationLayout>

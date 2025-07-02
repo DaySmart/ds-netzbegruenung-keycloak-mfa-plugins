@@ -23,8 +23,6 @@
 package netzbegruenung.keycloak.authenticator;
 
 import netzbegruenung.keycloak.authenticator.adapters.AuthenticationFlowContextAdapter;
-import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialData;
-import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import netzbegruenung.keycloak.authenticator.helpers.SmsHelper;
 import netzbegruenung.keycloak.authenticator.interfaces.UnifiedContext;
 
@@ -35,19 +33,14 @@ import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
-import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.util.JsonSerialization;
 
 import jakarta.ws.rs.core.Response;
-import java.util.Optional;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -57,27 +50,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
-		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
-		KeycloakSession session = context.getSession();
-		UserModel user = context.getUser();
-		RealmModel realm = context.getRealm();
-
-		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
-		String mobileNumber;
-		try {
-			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
-		} catch (IOException e1) {
-			logger.warn(e1.getMessage(), e1);
-			return;
-		}
-
-		try {
-			SmsHelper.sendCode(context, config, session, user, mobileNumber, realm);
-		} catch (Exception e) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-                context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
-                    .createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
-		}
+		SmsHelper.authenticate(context, logger);
 	}
 
 	@Override

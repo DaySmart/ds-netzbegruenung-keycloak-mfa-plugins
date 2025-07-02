@@ -6,10 +6,17 @@ import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.http.HttpRequest;
+import org.keycloak.models.RealmModel;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
+/*
+ * Adapter for RequiredActionContext
+ * 
+ * This adapter provides a unified context for required action.
+ * It is used to avoid code duplication and to make the code more readable.
+ */
 public class RequiredActionContextAdapter implements UnifiedContext {
     private final RequiredActionContext context;
 
@@ -39,5 +46,9 @@ public class RequiredActionContextAdapter implements UnifiedContext {
 
     public HttpRequest getHttpRequest() {
         return context.getHttpRequest();
+    }
+
+    public RealmModel getRealm() {
+        return context.getRealm();
     }
 }

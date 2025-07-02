@@ -6,10 +6,17 @@ import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.http.HttpRequest;
+import org.keycloak.models.RealmModel;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
+/*
+ * Adapter for AuthenticationFlowContext
+ * 
+ * This adapter provides a unified context for authentication flow.
+ * It is used to avoid code duplication and to make the code more readable.
+ */
 public class AuthenticationFlowContextAdapter implements UnifiedContext {
     private final AuthenticationFlowContext context;
 
@@ -39,5 +46,9 @@ public class AuthenticationFlowContextAdapter implements UnifiedContext {
 
     public HttpRequest getHttpRequest() {
         return context.getHttpRequest();
+    }
+
+    public RealmModel getRealm() {
+        return context.getRealm();
     }
 }

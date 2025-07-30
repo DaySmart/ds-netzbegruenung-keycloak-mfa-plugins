@@ -95,7 +95,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("numberTypeFilters", "Valid number type filters", "A list of valid number types to filter the input phone number by. Possible values are: FIXED_LINE, MOBILE, "
 				+ " FIXED_LINE_OR_MOBILE, PAGER, TOLL_FREE, PREMIUM_RATE, SHARED_COST, PERSONAL_NUMBER, VOIP, UAN, VOICEMAIL.", ProviderConfigProperty.MULTIVALUED_STRING_TYPE, Collections.emptyList()),
 			new ProviderConfigProperty("forceRetryOnBadFormat", "Ask for new number if checks fail", "Sets an error message and asks the user to re-enter phone number if formatting checks are not successfully passed.", ProviderConfigProperty.BOOLEAN_TYPE, false),
-			new ProviderConfigProperty("smsResendCooldownMs", "SMS resend cooldown", "The cooldown in milliseconds between SMS resend requests", ProviderConfigProperty.STRING_TYPE, 30000)
+			new ProviderConfigProperty(Constants.SMS_COOLDOWN_MS_KEY, "SMS resend cooldown", "The cooldown in milliseconds between SMS resend requests", ProviderConfigProperty.STRING_TYPE, 30000)
 		);
 	}
 

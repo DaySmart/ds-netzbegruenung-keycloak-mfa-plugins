@@ -24,6 +24,7 @@ import org.keycloak.util.JsonSerialization;
 import org.jboss.logging.Logger;
 
 import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 
 import java.io.IOException;
@@ -74,7 +75,20 @@ public class SmsHelper {
 
         SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-        context.challenge(context.form().setAttribute("realm", realm).createForm(Constants.SMS_LOGIN_TEMPLATE));
+        Response challenge = context.form()
+            .setAttribute("realm", realm)
+            .createForm(Constants.SMS_LOGIN_TEMPLATE);
+        
+        long cooldownMs = Long.parseLong(
+            config.getConfig().getOrDefault(
+                Constants.SMS_COOLDOWN_MS_KEY,
+                String.valueOf(Constants.SMS_COOLDOWN_MS)
+                )
+            );
+        // Set MFA phone number cookie
+        context.challenge(Response.fromResponse(challenge)
+            .cookie(createMfaPhoneCookie(mobileNumber, cooldownMs)) // set maxAge to cooldownMs to keep the cookie alive for the cooldown period
+            .build());
     }
 
     /**
@@ -154,7 +168,7 @@ public class SmsHelper {
 										.map(Long::parseLong).orElse(0L);
             long cooldownMs = Long.parseLong(
                 config.getConfig().getOrDefault(
-                    "smsResendCooldownMs",
+                    Constants.SMS_COOLDOWN_MS_KEY,
                     String.valueOf(Constants.SMS_COOLDOWN_MS)
                     )
                 );
@@ -163,11 +177,19 @@ public class SmsHelper {
 			if (timeDiff < cooldownMs) {
 				long secondsLeft = (cooldownMs - timeDiff) / 1000;
                 secondsLeft = (secondsLeft == 0) ? 1 : secondsLeft;
-                
-				context.challenge(context.form()
-								.setError("errorSmsCooldown", secondsLeft)
-								.createForm(Constants.SMS_LOGIN_TEMPLATE));
-				return true;          // Stay in the same auth step. Resend attempted, cooldown error shown
+
+                String mobileNumber = authSession.getAuthNote("mobile_number");
+
+                Response challenge = context.form()
+                    .setError("errorSmsCooldown", secondsLeft)
+                    .createForm(Constants.SMS_LOGIN_TEMPLATE);
+            
+                // Set MFA phone number cookie
+                context.challenge(Response.fromResponse(challenge)
+                    .cookie(createMfaPhoneCookie(mobileNumber, cooldownMs)) // set maxAge to cooldownMs to keep the cookie alive for the cooldown period
+                    .build());
+
+				return true; // Stay in the same auth step. Resend attempted, cooldown error shown
 			}
 
             Object baseContext = context.getBaseContext();
@@ -182,5 +204,42 @@ public class SmsHelper {
 		}
 
         return false; // Resend not requested
+    }
+
+    private static NewCookie createMfaPhoneCookie(String phoneNumber, long maxAgeInSeconds) {
+        return new NewCookie.Builder(Constants.MASKED_MFA_PHONE_NUMBER_COOKIE)
+            .value(maskPhoneNumber(phoneNumber)) // No need to sanitize for this cookie. The maskPhoneNumber method already sanitizes the phone number by removing all non-numeric characters
+            .path("/")
+            .comment("SameSite=Strict")  // comment (used by Keycloak to inject SameSite)
+            .sameSite(NewCookie.SameSite.STRICT)
+            .maxAge((int)maxAgeInSeconds)
+            .secure(true)
+            .httpOnly(false) // should be accessible to the login theme javascript
+            .build();
+    }
+
+    private static String maskPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null) {
+            return "";
+        }
+    
+        // Remove all non-numeric characters
+        String digitsOnly = phoneNumber.replaceAll("[^\\d]", "");
+    
+        int length = digitsOnly.length();
+        if (length <= 4) {
+            return ""; // Not enough digits to mask
+        }
+    
+        StringBuilder masked = new StringBuilder();
+    
+        // Mask all but the last 4 digits
+        for (int i = 0; i < length - 4; i++) {
+            masked.append("*");
+        }
+    
+        masked.append(digitsOnly.substring(length - 4));
+
+        return masked.toString();
     }
 }

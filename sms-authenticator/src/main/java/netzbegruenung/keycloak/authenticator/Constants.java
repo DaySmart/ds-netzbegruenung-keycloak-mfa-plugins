@@ -4,7 +4,7 @@ public class Constants {
     // SMS_LOGIN_TEMPLATE is the template used to render the SMS 2FA login page
     public static final String SMS_LOGIN_TEMPLATE = "login-sms.ftl";
 
-    // MASKEDMFA_PHONE_NUMBER_COOKIE is the cookie name for the masked MFA phone number used on SMS 2FA forms
+    // MASKED_MFA_PHONE_NUMBER_COOKIE is the cookie name for the masked MFA phone number used on SMS 2FA forms
     public static final String MASKED_MFA_PHONE_NUMBER_COOKIE = "masked_mfa_phone";
 
     // SMS_COOLDOWN_MS is in milliseconds and is used to throttle SMS resend requests

@@ -46,7 +46,8 @@ public class SmsHelper {
         KeycloakSession session,
         UserModel user,
         String mobileNumber,
-        RealmModel realm) throws IOException {
+        RealmModel realm,
+        boolean isResend) throws IOException {
 
         if (config == null || config.getConfig() == null) {
             throw new IllegalStateException("SMS authenticator not configured");
@@ -77,6 +78,7 @@ public class SmsHelper {
 
         Response challenge = context.form()
             .setAttribute("realm", realm)
+            .setAttribute("resendClicked", isResend)
             .createForm(Constants.SMS_LOGIN_TEMPLATE);
         
         long cooldownMs = Long.parseLong(
@@ -97,7 +99,7 @@ public class SmsHelper {
      * @param context The unified context
      * @param logger The logger
      */
-    public static void authenticate(AuthenticationFlowContext context, Logger logger) {
+    public static void authenticate(AuthenticationFlowContext context, Logger logger, boolean isResend) {
 		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
@@ -114,7 +116,7 @@ public class SmsHelper {
 
 		try {
             UnifiedContext unifiedContext = new AuthenticationFlowContextAdapter(context);
-			SmsHelper.sendCode(unifiedContext, config, session, user, mobileNumber, realm);
+			SmsHelper.sendCode(unifiedContext, config, session, user, mobileNumber, realm, isResend);
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
                 context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
@@ -128,7 +130,7 @@ public class SmsHelper {
      * @param context The unified context
      * @param logger The logger
      */
-    public static void requiredActionChallenge(RequiredActionContext context, Logger logger) {
+    public static void requiredActionChallenge(RequiredActionContext context, Logger logger, boolean isResend) {
 		try {
             AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
             KeycloakSession session = context.getSession();
@@ -140,7 +142,7 @@ public class SmsHelper {
 			logger.infof("Validating phone number: %s of user: %s", mobileNumber, user.getUsername());
 
             UnifiedContext unifiedContext = new RequiredActionContextAdapter(context);
-			SmsHelper.sendCode(unifiedContext, config, session, user, mobileNumber, realm);
+			SmsHelper.sendCode(unifiedContext, config, session, user, mobileNumber, realm, isResend);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			context.failure();
@@ -195,9 +197,9 @@ public class SmsHelper {
             Object baseContext = context.getBaseContext();
 
             if (baseContext instanceof AuthenticationFlowContext) {
-                authenticate((AuthenticationFlowContext) baseContext, logger);   // cool-down passed → send fresh code
+                authenticate((AuthenticationFlowContext) baseContext, logger, true);   // cool-down passed → send fresh code
             } else if (baseContext instanceof RequiredActionContext) {
-                requiredActionChallenge((RequiredActionContext) baseContext, logger);   // cool-down passed → send fresh code
+                requiredActionChallenge((RequiredActionContext) baseContext, logger, true);   // cool-down passed → send fresh code
             }
 			
 			return true;

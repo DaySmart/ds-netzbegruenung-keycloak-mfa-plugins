@@ -50,7 +50,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
-		SmsHelper.authenticate(context, logger);
+		SmsHelper.authenticate(context, logger, false);
 	}
 
 	@Override

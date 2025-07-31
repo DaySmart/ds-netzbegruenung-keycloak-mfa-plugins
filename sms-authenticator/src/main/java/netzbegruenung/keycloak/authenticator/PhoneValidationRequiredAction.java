@@ -50,7 +50,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
 		context.getUser().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
-		SmsHelper.requiredActionChallenge(context, logger);
+		SmsHelper.requiredActionChallenge(context, logger, false);
 	}
 
 	@Override

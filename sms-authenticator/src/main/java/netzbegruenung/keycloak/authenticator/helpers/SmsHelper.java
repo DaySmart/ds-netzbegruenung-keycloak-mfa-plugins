@@ -47,7 +47,7 @@ public class SmsHelper {
         UserModel user,
         String mobileNumber,
         RealmModel realm,
-        Boolean isResend) throws IOException {
+        boolean isResend) throws IOException {
 
         if (config == null || config.getConfig() == null) {
             throw new IllegalStateException("SMS authenticator not configured");
@@ -99,7 +99,7 @@ public class SmsHelper {
      * @param context The unified context
      * @param logger The logger
      */
-    public static void authenticate(AuthenticationFlowContext context, Logger logger, Boolean isResend) {
+    public static void authenticate(AuthenticationFlowContext context, Logger logger, boolean isResend) {
 		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
@@ -130,7 +130,7 @@ public class SmsHelper {
      * @param context The unified context
      * @param logger The logger
      */
-    public static void requiredActionChallenge(RequiredActionContext context, Logger logger, Boolean isResend) {
+    public static void requiredActionChallenge(RequiredActionContext context, Logger logger, boolean isResend) {
 		try {
             AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
             KeycloakSession session = context.getSession();

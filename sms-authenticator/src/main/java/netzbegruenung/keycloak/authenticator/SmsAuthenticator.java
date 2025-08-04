@@ -78,7 +78,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			if (Long.parseLong(ttl) < System.currentTimeMillis()) {
 				// expired
 				context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
-					context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
+					context.form().setError("smsAuthCodeExpired").createForm(Constants.SMS_LOGIN_TEMPLATE));
 			} else {
 				// valid
 				context.success();

@@ -89,7 +89,7 @@ public class SmsHelper {
             );
         // Set MFA phone number cookie
         context.challenge(Response.fromResponse(challenge)
-            .cookie(createMfaPhoneCookie(mobileNumber, cooldownMs)) // set maxAge to cooldownMs to keep the cookie alive for the cooldown period
+            .cookie(createMfaPhoneCookie(mobileNumber, cooldownMs, realm.getName())) // set maxAge to cooldownMs to keep the cookie alive for the cooldown period
             .build());
     }
 
@@ -188,7 +188,7 @@ public class SmsHelper {
             
                 // Set MFA phone number cookie
                 context.challenge(Response.fromResponse(challenge)
-                    .cookie(createMfaPhoneCookie(mobileNumber, cooldownMs)) // set maxAge to cooldownMs to keep the cookie alive for the cooldown period
+                    .cookie(createMfaPhoneCookie(mobileNumber, cooldownMs, context.getRealm().getName())) // set maxAge to cooldownMs to keep the cookie alive for the cooldown period
                     .build());
 
 				return true; // Stay in the same auth step. Resend attempted, cooldown error shown
@@ -208,10 +208,10 @@ public class SmsHelper {
         return false; // Resend not requested
     }
 
-    private static NewCookie createMfaPhoneCookie(String phoneNumber, long maxAgeInSeconds) {
+    private static NewCookie createMfaPhoneCookie(String phoneNumber, long maxAgeInSeconds, String realm) {
         return new NewCookie.Builder(Constants.MASKED_MFA_PHONE_NUMBER_COOKIE)
             .value(maskPhoneNumber(phoneNumber)) // No need to sanitize for this cookie. The maskPhoneNumber method already sanitizes the phone number by removing all non-numeric characters
-            .path("/")
+            .path("/realms/" + realm + "/")
             .comment("SameSite=Strict")  // comment (used by Keycloak to inject SameSite)
             .sameSite(NewCookie.SameSite.STRICT)
             .maxAge((int)maxAgeInSeconds)

@@ -34,8 +34,8 @@ import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.credential.CredentialModel;
-import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RequiredActionConfigModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.credential.OTPCredentialModel;
@@ -65,10 +65,9 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
-		// TODO: get the alias from somewhere else or move config into realm or application scope
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		RequiredActionConfigModel config = context.getConfig();
 		if (config == null) {
-			logger.error("Failed to check 2FA enforcement, no config alias sms-2fa found");
+			logger.error("Failed to check 2FA enforcement, no config set on this required action");
 			return;
 		}
 		boolean forceSecondFactorEnabled = Boolean.parseBoolean(config.getConfig().get("forceSecondFactor"));
@@ -143,7 +142,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 
 		// get the phone number formatting values from the config
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		RequiredActionConfigModel config = context.getConfig();
 		boolean normalizeNumber = false;
 		boolean forceRetryOnBadFormat = false;
 		if (config != null && config.getConfig() != null) {
@@ -180,9 +179,9 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	 * @return				the formatted mobile phone number, null if the phone number is invalid or mobileNumber if the config was not found
 	 */
 	private String formatPhoneNumber(RequiredActionContext context, String mobileNumber) {
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		RequiredActionConfigModel config = context.getConfig();
 		if (config == null || config.getConfig() == null) {
-			logger.error("Failed format phone number, no config alias sms-2fa found");
+			logger.error("Failed format phone number, no config set on this required action");
 			return mobileNumber;
 		}
 		final PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();

@@ -50,11 +50,21 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
+		context.form().setAttribute("showTryDifferentMethod",
+				MfaBackNavigationSupport.hasMultipleAvailableMethods(context.getUser()));
 		SmsHelper.authenticate(context, logger, false);
 	}
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
+		if (MfaBackNavigationSupport.isTryDifferentMethodRequested(context)) {
+			MfaBackNavigationSupport.backToMethodPicker(context);
+			return;
+		}
+
+		context.form().setAttribute("showTryDifferentMethod",
+				MfaBackNavigationSupport.hasMultipleAvailableMethods(context.getUser()));
+
 		UnifiedContext unifiedContext = new AuthenticationFlowContextAdapter(context);
 
 		if (SmsHelper.handleResendIfRequested(unifiedContext, logger)) {

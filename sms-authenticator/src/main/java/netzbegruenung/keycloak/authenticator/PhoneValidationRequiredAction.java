@@ -32,7 +32,7 @@ import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.credential.CredentialProvider;
-import org.keycloak.models.AuthenticatorConfigModel;
+import org.keycloak.models.RequiredActionConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
@@ -97,9 +97,9 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	}
 
 	private void handlePhoneToAttribute(RequiredActionContext context, String mobileNumber) {
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		RequiredActionConfigModel config = context.getConfig();
 		if (config == null) {
-			logger.warn("No config alias sms-2fa found, skip phone number to attribute check");
+			logger.warn("No config set on this required action, skip phone number to attribute check");
 		} else {
 			if (Boolean.parseBoolean(config.getConfig().get("storeInAttribute"))) {
 				context.getUser().setSingleAttribute("mobile_number", mobileNumber);
